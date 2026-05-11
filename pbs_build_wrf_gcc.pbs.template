@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -N wrf_gcc_build
+#PBS -P YOUR_PROJECT_CODE
+#PBS -q smp
+#PBS -l select=1:ncpus=24:mpiprocs=24:nodetype=haswell_reg
+#PBS -l walltime=06:00:00
+#PBS -o /home/apps/chpc/earth/WRF-4.7.1-gcc/_build_logs/build_gcc.out
+#PBS -e /home/apps/chpc/earth/WRF-4.7.1-gcc/_build_logs/build_gcc.err
+
+set -euo pipefail
+INSTALL_DIR="${INSTALL_DIR:-/home/apps/chpc/earth/WRF-4.7.1-gcc}"
+cd "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/_build_logs"
+
+export NUM_CORES="${NUM_CORES:-4}"
+bash ./install_wrf_lengau_gcc.sh
+bash ./install_wps_lengau_gcc.sh
+
+echo "=== PBS build finished at $(date) ==="
