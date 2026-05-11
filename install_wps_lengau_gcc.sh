@@ -38,8 +38,8 @@ printf '%s\n' "${WPS_CONFIG_OPTION}" | ./configure 2>&1 | tee configure.log
 
 [[ -f configure.wps ]] || { echo "ERROR: configure.wps missing — run ./configure interactively."; exit 2; }
 
-sed -i 's|^DM_FC[[:space:]]*=.*|DM_FC               = mpif90 -f90=gfortran|' configure.wps
-sed -i 's|^DM_CC[[:space:]]*=.*|DM_CC               = mpicc -cc=gcc|'       configure.wps
+sed -i 's|^DM_FC[[:space:]]*=.*|DM_FC               = mpif90|' configure.wps
+sed -i 's|^DM_CC[[:space:]]*=.*|DM_CC               = mpicc|'   configure.wps
 
 ./compile 2>&1 | tee compile.log
 

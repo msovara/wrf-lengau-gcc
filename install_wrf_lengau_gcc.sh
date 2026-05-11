@@ -80,9 +80,9 @@ printf '%s\n%s\n' "${WRF_CONFIG_OPTION}" "${WRF_NEST_OPTION}" | ./configure 2>&1
     exit 2
 }
 
-# Ensure distributed-memory wrappers point at MPICH (matches CHPC NetCDF module)
-sed -i 's|^DM_FC[[:space:]]*=.*|DM_FC           = mpif90 -f90=gfortran|' configure.wrf
-sed -i 's|^DM_CC[[:space:]]*=.*|DM_CC           = mpicc -cc=gcc -DMPI2_SUPPORT|' configure.wrf
+# MPICH 3.3 on Lengau: plain mpif90/mpicc (do not pass -f90=/ -cc=; wrappers reject them)
+sed -i 's|^DM_FC[[:space:]]*=.*|DM_FC           = mpif90|' configure.wrf
+sed -i 's|^DM_CC[[:space:]]*=.*|DM_CC           = mpicc -DMPI2_SUPPORT|' configure.wrf
 
 set +e
 echo "=== compile pass 1/2 (-j ${NUM_CORES}) ==="
