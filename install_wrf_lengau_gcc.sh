@@ -2,9 +2,10 @@
 # ---------------------------------------------------------------------------
 # WRF v4.7.1 — CHPC Lengau — GNU gfortran + gcc + MPICH + NetCDF (GCC build)
 #
-# Prerequisite: source at ${BUILD_DIR}/WRF from download_wrf_source.sh (DTN).
-# Run on a compute node (PBS). Uses ONLY the MPICH shipped with the NetCDF
-# module — do not load OpenMPI in the same session.
+# Prerequisite: WRF source at ${BUILD_DIR}/WRF (download_wrf_source.sh on DTN).
+# WRF 4.7+ needs phys/physics_mmm from GitHub: run checkout_wrf_externals_dtn.sh on the DTN
+# (./clean -a removes it). Leave WRF_RUN_CLEAN unset to auto-skip clean when .git exists.
+# Run on a compute node (PBS). Use only the MPICH from the NetCDF module — do not load OpenMPI.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -16,8 +17,18 @@ WRF_VERSION="${WRF_VERSION:-v4.7.1}"
 
 NETCDF_MODULE="${NETCDF_MODULE:-chpc/earth/netcdf/4.7.4/gcc-8.3.0}"
 
-# WRF v4.7.1 Linux x86_64: GNU (gfortran/gcc), (dmpar) — verify with ./configure.
-WRF_CONFIG_OPTION="${WRF_CONFIG_OPTION:-35}"
+# WRF v4.7.1 Linux x86_64 menu: 34 = GNU dmpar; 35 = GNU dm+sm (MPI+OpenMP).
+WRF_CONFIG_OPTION="${WRF_CONFIG_OPTION:-34}"
+
+# ./clean -a removes phys/physics_mmm; Lengau compute nodes usually cannot git clone.
+# Unset WRF_RUN_CLEAN to auto: skip clean if phys/physics_mmm/.git already exists.
+if [[ -z "${WRF_RUN_CLEAN:-}" ]]; then
+    if [[ -d "${BUILD_DIR}/WRF/phys/physics_mmm/.git" ]]; then
+        WRF_RUN_CLEAN=0
+    else
+        WRF_RUN_CLEAN=1
+    fi
+fi
 WRF_NEST_OPTION="${WRF_NEST_OPTION:-1}"
 WRF_CASE="${WRF_CASE:-em_real}"
 
@@ -29,6 +40,7 @@ echo "BUILD_DIR      = ${BUILD_DIR}"
 echo "MODULE_DIR     = ${MODULE_DIR} (${MODULE_NAME})"
 echo "NETCDF_MODULE  = ${NETCDF_MODULE}"
 echo "WRF_CONFIG     = ${WRF_CONFIG_OPTION} (nesting=${WRF_NEST_OPTION})"
+echo "WRF_RUN_CLEAN  = ${WRF_RUN_CLEAN} (1=./clean -a before configure; 0=preserve phys/physics_mmm)"
 echo "NUM_CORES      = ${NUM_CORES}"
 echo
 
@@ -79,8 +91,23 @@ echo
 
 cd "${BUILD_DIR}/WRF"
 
-echo "Cleaning previous WRF build..."
-./clean -a >/dev/null 2>&1 || true
+if [[ "${WRF_RUN_CLEAN}" == "1" ]]; then
+    echo "Cleaning previous WRF build (./clean -a)..."
+    ./clean -a >/dev/null 2>&1 || true
+else
+    echo "Skipping ./clean -a (WRF_RUN_CLEAN=0) — preserving phys/physics_mmm for offline Git checkouts."
+fi
+
+if [[ "${WRF_RUN_CLEAN}" == "0" ]]; then
+    if [[ ! -d phys/physics_mmm/.git ]]; then
+        echo
+        echo "ERROR: phys/physics_mmm is not a git checkout (.git missing) but WRF_RUN_CLEAN=0."
+        echo "On the DTN (GitHub access), run:"
+        echo "  INSTALL_DIR=${INSTALL_DIR} ./checkout_wrf_externals_dtn.sh"
+        echo "Optionally RUN_CLEAN_A=1 for ./clean -a on the DTN before checkout."
+        exit 2
+    fi
+fi
 
 echo "Running WRF ./configure (${WRF_CONFIG_OPTION}, nesting ${WRF_NEST_OPTION})..."
 printf '%s\n%s\n' "${WRF_CONFIG_OPTION}" "${WRF_NEST_OPTION}" | ./configure 2>&1 | tee configure.log

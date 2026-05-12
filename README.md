@@ -14,7 +14,9 @@ This is a **separate repository** from [wrf-lengau](https://github.com/msovara/w
 | MPI | **MPICH 3.3** gcc 8.3 — loaded with NetCDF module (do **not** mix in OpenMPI for this stack) |
 | NetCDF | `chpc/earth/netcdf/4.7.4/gcc-8.3.0` → install prefix **`/apps/chpc/earth/netcdf2020`** |
 
-**WRF v4.7.x** runs **`manage_externals` / `checkout_externals`** during the physics build; compute nodes need **`python3`** in `PATH`. The install scripts try **`module load chpc/python/anaconda/3-2024.10.1`** if `python3` is missing—adjust if your site uses another Python module.
+**WRF v4.7.x** pulls **MMM-physics** from GitHub via **`manage_externals` / `checkout_externals`**. On Lengau, **compute nodes often cannot reach GitHub**, while **`./clean -a` deletes `phys/physics_mmm`**. Use the **DTN** to run **`checkout_wrf_externals_dtn.sh`** (or the same `checkout_externals` command by hand), then build with **`WRF_RUN_CLEAN=0`** or leave **`WRF_RUN_CLEAN` unset** after checkout—the installer **auto-skips** `./clean -a` when **`phys/physics_mmm/.git`** is already present.
+
+Compute jobs still need **`python3`** in `PATH` for other build steps; the installers try **`module load chpc/python/anaconda/3-2024.10.1`** if `python3` is missing.
 
 After `module load chpc/earth/netcdf/4.7.4/gcc-8.3.0`:
 
@@ -50,9 +52,11 @@ On `dtn.chpc.ac.za`:
 export INSTALL_DIR=/home/apps/chpc/earth/WRF-4.7.1-gcc
 cp -r wrf-lengau-gcc/* "$INSTALL_DIR/"   # or clone directly under $INSTALL_DIR
 cd "$INSTALL_DIR"
-chmod +x download_*.sh install_*.sh
+chmod +x download_*.sh install_*.sh checkout_wrf_externals_dtn.sh
 ./download_wrf_source.sh
 ./download_wps_source.sh
+# Full WRF clean on DTN + fetch MMM-physics from GitHub. Omit RUN_CLEAN_A if ./clean -a not needed.
+RUN_CLEAN_A=1 ./checkout_wrf_externals_dtn.sh
 ```
 
 ### 3. Build on a compute node
@@ -77,14 +81,14 @@ Run `wrf.exe` / `real.exe` with your PBS `mpirun` / `mpiexec` from the **same** 
 
 ## WRF / WPS `configure` option numbers
 
-For **WRF v4.7.1** on **Linux x86_64**, the **GNU (`gfortran`/`gcc`) distributed-memory parallel** (`dmpar`) choice is typically **option 35** in `./configure` (always confirm on first run — NCAR renumbers occasionally).
+For **WRF v4.7.1** on **Linux x86_64**, **GNU (`gfortran`/`gcc`)** lines are **`dmpar`** vs **`dm+sm` (MPI+OpenMP)**. The default **`WRF_CONFIG_OPTION=34`** is **`dmpar`**; use **`35`** for **`dm+sm`** (always confirm with the live `./configure` menu).
 
 For **WPS** (current upstream `master` `configure.defaults`), **Linux x86_64 gfortran** list is usually: `serial`, `serial_NO_GRIB2`, **`dmpar`**, `dmpar_NO_GRIB2` → pick **`dmpar`** (often **3**). Override with `WPS_CONFIG_OPTION` if your menu differs.
 
 Set before running installers if needed:
 
 ```bash
-export WRF_CONFIG_OPTION=35
+export WRF_CONFIG_OPTION=34
 export WRF_NEST_OPTION=1
 export WPS_CONFIG_OPTION=3
 ```
@@ -95,7 +99,8 @@ export WPS_CONFIG_OPTION=3
 |------|--------|
 | `download_wrf_source.sh` | Clone WRF + submodules on DTN |
 | `download_wps_source.sh` | Clone WPS on DTN |
-| `install_wrf_lengau_gcc.sh` | Configure + compile WRF (`em_real`) |
+| `checkout_wrf_externals_dtn.sh` | On the **DTN**: `checkout_externals` for **MMM-physics** (GitHub) |
+| `install_wrf_lengau_gcc.sh` | Configure + compile WRF (`em_real`); respects **`WRF_RUN_CLEAN`** |
 | `install_wps_lengau_gcc.sh` | Configure + compile WPS (after WRF) |
 | `pbs_build_wrf_gcc.pbs.template` | Example PBS job |
 | `DEPLOY_SCRIPTS.md` | Copy scripts to `$INSTALL_DIR` |
