@@ -25,6 +25,9 @@ echo
 
 module purge 2>/dev/null || true
 module load "${NETCDF_MODULE}"
+if ! command -v python3 &>/dev/null; then
+    module load chpc/python/anaconda/3-2024.10.1 2>/dev/null || true
+fi
 
 export NETCDF="$(nc-config --prefix)"
 export WRF_DIR

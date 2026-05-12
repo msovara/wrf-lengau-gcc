@@ -14,6 +14,8 @@ This is a **separate repository** from [wrf-lengau](https://github.com/msovara/w
 | MPI | **MPICH 3.3** gcc 8.3 — loaded with NetCDF module (do **not** mix in OpenMPI for this stack) |
 | NetCDF | `chpc/earth/netcdf/4.7.4/gcc-8.3.0` → install prefix **`/apps/chpc/earth/netcdf2020`** |
 
+**WRF v4.7.x** runs **`manage_externals` / `checkout_externals`** during the physics build; compute nodes need **`python3`** in `PATH`. The install scripts try **`module load chpc/python/anaconda/3-2024.10.1`** if `python3` is missing—adjust if your site uses another Python module.
+
 After `module load chpc/earth/netcdf/4.7.4/gcc-8.3.0`:
 
 - `NETCDF` should be `/apps/chpc/earth/netcdf2020` (or use `$(nc-config --prefix)`).

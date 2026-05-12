@@ -39,6 +39,16 @@ echo
 
 module purge 2>/dev/null || true
 module load "${NETCDF_MODULE}"
+# WRF 4.7+ runs checkout_externals during the physics build; compute nodes often have no python3 in default PATH.
+if ! command -v python3 &>/dev/null; then
+    module load chpc/python/anaconda/3-2024.10.1 2>/dev/null \
+        || module load python3 2>/dev/null \
+        || true
+fi
+command -v python3 &>/dev/null || {
+    echo "ERROR: python3 not found after modules. Load a Python 3 module before building (e.g. chpc/python/anaconda/3-2024.10.1)."
+    exit 1
+}
 
 export NETCDF="$(nc-config --prefix 2>/dev/null || true)"
 [[ -n "${NETCDF}" && -d "${NETCDF}" ]] || {
