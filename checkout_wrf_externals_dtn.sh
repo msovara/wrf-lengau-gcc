@@ -68,7 +68,7 @@ export GIT_CONFIG_GLOBAL="${HOME}/.gitconfig"
     echo "ERROR: phys/physics_mmm/.git missing after checkout — see messages above."
     exit 1
 }
-[[ $(find phys/physics_mmm -maxdepth 4 \( -name '*.F' -o -name '*.f90' \) 2>/dev/null | wc -l) -gt 0 ]] || {
+[[ $(find phys/physics_mmm -maxdepth 4 \( -iname '*.f90' -o -name '*.F' \) 2>/dev/null | wc -l) -gt 0 ]] || {
     echo "ERROR: phys/physics_mmm looks empty after checkout."
     exit 1
 }
