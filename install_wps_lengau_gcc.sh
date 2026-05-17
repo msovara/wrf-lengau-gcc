@@ -10,14 +10,22 @@ WRF_DIR="${BUILD_DIR}/WRF"
 WPS_DIR="${BUILD_DIR}/WPS"
 NETCDF_MODULE="${NETCDF_MODULE:-chpc/earth/netcdf/4.7.4/gcc-8.3.0}"
 
-# WPS master/current: Linux x86_64 gfortran — usually 1=serial, 2=serial_NO_GRIB2,
+# Ungrib GRIB2 needs Jasper + libpng + zlib headers/libs. On Lengau, /usr has libjasper
+# but not jasper/jasper.h; use CHPC library installs (no need to load gcc/6.1.0 modules).
+JASPER_ROOT="${JASPER_ROOT:-/apps/libs/jasper/gcc/6.1.0/1.701.0}"
+LIBPNG_ROOT="${LIBPNG_ROOT:-/apps/libs/libpng/gcc/6.1.0/1.6.35}"
+ZLIB_ROOT="${ZLIB_ROOT:-/apps/libs/zlib/gcc/6.1.0/1.2.11}"
+export JASPERLIB="${JASPERLIB:-${JASPER_ROOT}/lib}"
+export JASPERINC="${JASPERINC:-${JASPER_ROOT}/include}"
 # 3=dmpar, 4=dmpar_NO_GRIB2. We want dmpar + GRIB2 → default 3.
 WPS_CONFIG_OPTION="${WPS_CONFIG_OPTION:-3}"
 
 echo "=== WPS installer (GCC + MPICH) ==="
 echo "WPS_DIR        = ${WPS_DIR}"
 echo "WRF_DIR        = ${WRF_DIR}"
-echo "CONFIG_OPTION  = ${WPS_CONFIG_OPTION}"
+echo "JASPERINC/LIB = ${JASPERINC} / ${JASPERLIB}"
+echo "LIBPNG_ROOT   = ${LIBPNG_ROOT}"
+echo "ZLIB_ROOT     = ${ZLIB_ROOT}"
 echo
 
 [[ -f "${WPS_DIR}/configure" ]] || { echo "ERROR: WPS missing at ${WPS_DIR} — run download_wps_source.sh on DTN."; exit 1; }
@@ -31,8 +39,8 @@ fi
 
 export NETCDF="$(nc-config --prefix)"
 export WRF_DIR
-export JASPERLIB="${JASPERLIB:-/usr/lib64}"
-export JASPERINC="${JASPERINC:-/usr/include}"
+export JASPERLIB
+export JASPERINC
 
 cd "${WPS_DIR}"
 ./clean -a >/dev/null 2>&1 || ./clean >/dev/null 2>&1 || true
@@ -43,6 +51,14 @@ printf '%s\n' "${WPS_CONFIG_OPTION}" | ./configure 2>&1 | tee configure.log
 
 sed -i 's|^DM_FC[[:space:]]*=.*|DM_FC               = mpif90|' configure.wps
 sed -i 's|^DM_CC[[:space:]]*=.*|DM_CC               = mpicc|'   configure.wps
+
+# configure.wps defaults COMPRESSION_* to /usr — insufficient on Lengau (no jasper headers; linker -ljasper).
+if grep -q '^COMPRESSION_LIBS[[:space:]]*=.*-L/usr/lib64' configure.wps; then
+    sed -i "s|^COMPRESSION_LIBS[[:space:]]*=.*-L/usr/lib64.*|COMPRESSION_LIBS    = -L${JASPERLIB} -L${LIBPNG_ROOT}/lib -L${ZLIB_ROOT}/lib -ljasper -lpng -lz|" configure.wps
+fi
+if grep -q '^COMPRESSION_INC[[:space:]]*=.*-I/usr/include' configure.wps; then
+    sed -i "s|^COMPRESSION_INC[[:space:]]*=.*-I/usr/include.*|COMPRESSION_INC     = -I${JASPERINC} -I${LIBPNG_ROOT}/include -I${ZLIB_ROOT}/include|" configure.wps
+fi
 
 ./compile 2>&1 | tee compile.log
 
