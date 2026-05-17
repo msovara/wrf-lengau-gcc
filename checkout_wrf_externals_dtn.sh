@@ -18,6 +18,11 @@ RUN_CLEAN_A="${RUN_CLEAN_A:-0}"
     exit 1
 }
 
+# CHPC login/DTN shells often inherit Intel paths in LD_LIBRARY_PATH; that breaks
+# git-remote-https (libcurl vs libnss). Purge modules and drop LD_* before git.
+module purge 2>/dev/null || true
+unset LD_LIBRARY_PATH
+
 if ! command -v python3 &>/dev/null; then
     module load chpc/python/anaconda/3-2024.10.1 2>/dev/null \
         || module load python3 2>/dev/null \
@@ -40,6 +45,8 @@ if [[ "${RUN_CLEAN_A}" == "1" ]]; then
 fi
 
 echo "=== checkout_externals (see arch/Externals.cfg) in ${WRF_DIR} ==="
+# Modules (e.g. Anaconda) may re-set LD_LIBRARY_PATH; git HTTPS needs a clean stack.
+unset LD_LIBRARY_PATH
 ./tools/manage_externals/checkout_externals --externals ./arch/Externals.cfg
 
 [[ -d phys/physics_mmm/.git ]] || {
