@@ -52,13 +52,12 @@ printf '%s\n' "${WPS_CONFIG_OPTION}" | ./configure 2>&1 | tee configure.log
 sed -i 's|^DM_FC[[:space:]]*=.*|DM_FC               = mpif90|' configure.wps
 sed -i 's|^DM_CC[[:space:]]*=.*|DM_CC               = mpicc|'   configure.wps
 
-# configure.wps defaults COMPRESSION_* to /usr — insufficient on Lengau (no jasper headers; linker -ljasper).
-if grep -q '^COMPRESSION_LIBS[[:space:]]*=.*-L/usr/lib64' configure.wps; then
-    sed -i "s|^COMPRESSION_LIBS[[:space:]]*=.*-L/usr/lib64.*|COMPRESSION_LIBS    = -L${JASPERLIB} -L${LIBPNG_ROOT}/lib -L${ZLIB_ROOT}/lib -ljasper -lpng -lz|" configure.wps
-fi
-if grep -q '^COMPRESSION_INC[[:space:]]*=.*-I/usr/include' configure.wps; then
-    sed -i "s|^COMPRESSION_INC[[:space:]]*=.*-I/usr/include.*|COMPRESSION_INC     = -I${JASPERINC} -I${LIBPNG_ROOT}/include -I${ZLIB_ROOT}/include|" configure.wps
-fi
+# configure may set COMPRESSION_* from $JASPERLIB but omit libpng/zlib (-I/-L). Ungrib's dec_png.c needs png.h.
+sed -i "/^COMPRESSION_LIBS[[:space:]]*=.*-ljasper/s|.*|COMPRESSION_LIBS    = -L${JASPERLIB} -L${LIBPNG_ROOT}/lib -L${ZLIB_ROOT}/lib -ljasper -lpng -lz|" configure.wps
+# Real COMPRESSION_INC lines start with "-I"; skip the "# intentionally left blank" placeholders.
+sed -i "/^COMPRESSION_INC[[:space:]]*=[[:space:]]*-I/s|.*|COMPRESSION_INC     = -I${JASPERINC} -I${LIBPNG_ROOT}/include -I${ZLIB_ROOT}/include|" configure.wps
+
+touch configure.wps
 
 ./compile 2>&1 | tee compile.log
 
