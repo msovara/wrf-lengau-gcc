@@ -23,6 +23,18 @@ RUN_CLEAN_A="${RUN_CLEAN_A:-0}"
 module purge 2>/dev/null || true
 unset LD_LIBRARY_PATH
 
+# CentOS 7 /usr/bin/git is often 1.8.3 — too old for manage_externals (needs git -C).
+if [[ "$(git --version 2>/dev/null | sed -n 's/.*git version \([0-9]*\).*/\1/p')" == "1" ]]; then
+    module load chpc/git/2.41.0 2>/dev/null \
+        || module load chpc/git/2.38.1 2>/dev/null \
+        || module load chpc/git/2.14 2>/dev/null \
+        || true
+fi
+if git -C /tmp help 2>&1 | grep -q "Unknown option"; then
+    echo "ERROR: git is too old (need -C option). On CHPC run: module load chpc/git/2.41.0"
+    exit 1
+fi
+
 if ! command -v python3 &>/dev/null; then
     module load chpc/python/anaconda/3-2024.10.1 2>/dev/null \
         || module load python3 2>/dev/null \
