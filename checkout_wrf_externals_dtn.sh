@@ -59,10 +59,17 @@ fi
 echo "=== checkout_externals (see arch/Externals.cfg) in ${WRF_DIR} ==="
 # Modules (e.g. Anaconda) may re-set LD_LIBRARY_PATH; git HTTPS needs a clean stack.
 unset LD_LIBRARY_PATH
+# CHPC git builds may reference another user's config/templates — skip system config.
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL="${HOME}/.gitconfig"
 ./tools/manage_externals/checkout_externals --externals ./arch/Externals.cfg
 
 [[ -d phys/physics_mmm/.git ]] || {
     echo "ERROR: phys/physics_mmm/.git missing after checkout — see messages above."
+    exit 1
+}
+[[ $(find phys/physics_mmm -maxdepth 4 \( -name '*.F' -o -name '*.f90' \) 2>/dev/null | wc -l) -gt 0 ]] || {
+    echo "ERROR: phys/physics_mmm looks empty after checkout."
     exit 1
 }
 
